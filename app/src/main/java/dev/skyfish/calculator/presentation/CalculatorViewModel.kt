@@ -73,22 +73,6 @@ class CalculatorViewModel: ViewModel() {
 
     }
 
-    private fun addDecimal() {
-        TODO("Not yet implemented")
-    }
-
-    private fun negate() {
-        TODO("Not yet implemented")
-    }
-
-    private fun clearScreen() {
-        TODO("Not yet implemented")
-    }
-
-    private fun backspace() {
-        TODO("Not yet implemented")
-    }
-
     private fun calculate() {
         val operand1 = state.number1.toDoubleOrNull()
         val operand2 = state.number2.toDoubleOrNull()
@@ -126,7 +110,109 @@ class CalculatorViewModel: ViewModel() {
         }
     }
 
+    private fun addDecimal() {
+        val isFirstNumber = state.operation == null
+        state = if(isFirstNumber){
+            val number1 = addDecimal(state.number1)
+            state.copy(
+                number1 = number1,
+                displayNumber = number1,
+            )
+        } else {
+            val number2 = addDecimal(state.number2)
+            state.copy(
+                number2 = number2,
+                displayNumber = number2
+            )
+        }
+        state = state.copy(currentEquation = writePartialEquation())
+    }
 
+    private fun addDecimal(number: String): String{
+        return if(number == ""){
+            "0."
+        }else if(number.contains(".")){
+            number
+        }else{
+            "$number."
+        }
+    }
+
+    private fun negate() {
+        val resultFromLastOperation = state.displayNumber != "" && state.number1 == ""
+        val zeroShouldNotBeNegative = state.displayNumber == "" || state.displayNumber.toDoubleOrNull() == 0.0
+        val negateFirstNumber = state.number2 == "" && state.number1 != ""
+
+        if(resultFromLastOperation){
+            val negatedValue = negateValue(state.displayNumber)
+            state = state.copy(
+                displayNumber = negatedValue
+            )
+        }else if(zeroShouldNotBeNegative){
+            return
+        }else if(negateFirstNumber){
+            val negatedValue = negateValue(state.number1)
+            state = state.copy(
+                number1 = negatedValue,
+                displayNumber = negatedValue
+            )
+        } else {
+            val negatedValue = negateValue(state.number2)
+            state = state.copy(
+                number2 = negatedValue,
+                displayNumber = negatedValue
+            )
+        }
+        state = state.copy(currentEquation = writePartialEquation())
+    }
+
+    private fun negateValue(number: String): String{
+        val alreadyNegative = number.contains("-")
+        return if(alreadyNegative) number.drop(1) else "-" + number
+    }
+
+    private fun clearScreen() {
+        state = CalculatorState(
+            equations = state.equations
+        )
+    }
+
+    private fun backspace() {
+        val onNumber2 = state.number2.isNotBlank()
+        val onOperator = state.operation != null
+        val onNumber1 = state.number1.isNotBlank()
+
+        when{
+            onNumber2 -> state = state.copy(
+                number2 = state.number2.dropLast(1),
+                displayNumber = state.displayNumber.dropLast(1),
+                currentEquation = state.currentEquation.dropLast(1)
+            )
+            onOperator -> state = state.copy(
+                operation = null,
+                currentEquation = state.number1
+            )
+            onNumber1 -> state = state.copy(
+                number1 = state.number1.dropLast(1),
+                displayNumber = state.number1.dropLast(1),
+                currentEquation = state.number1.dropLast(1)
+            )
+        }
+        if(state.displayNumber == "" || state.displayNumber == "-"){
+            if(state.number1 != "" && state.number1 != "-") {
+                state = state.copy(
+                    displayNumber = state.number1,
+                    number2 = ""
+                )
+            }else{
+                clearScreen()
+            }
+        }
+        state = state.copy(
+            currentEquation = writePartialEquation()
+        )
+
+    }
 
     private fun writePartialEquation(): String{
         val equation = if(state.operation != null){
